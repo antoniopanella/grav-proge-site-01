@@ -1,0 +1,51 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - progesite-2
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to registry
+      uses: docker/login-action@v2
+      with:
+        registry: https://progeplayground.azurecr.io/
+        username: ${{ secrets.AzureAppService_ContainerUsername_1222e8e595ff488f940629bea31d74b4 }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_0b0f9dd88d7d408f8ed840afe1d63520 }}
+
+    - name: Build and push container image to registry
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: progeplayground.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_1222e8e595ff488f940629bea31d74b4 }}/grav-progesite:${{ github.sha }}
+        file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Deploy to Azure Web App
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'progesite-2'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_f8a8445fd91f42dfaa7b6cb8c41c2497 }}
+        images: 'progeplayground.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_1222e8e595ff488f940629bea31d74b4 }}/grav-progesite:${{ github.sha }}'
